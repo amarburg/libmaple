@@ -1,0 +1,135 @@
+
+i2c General Reference ---------------------------------------------------------
+
+http://en.wikipedia.org/wiki/I²C
+
+4 modes/roles for a given device. These designations are transaction specific;
+a device can switch roles from one transaction to the next:
+    master transmit
+    master receive
+    slave transmit
+    slave receive
+
+>100khz is "fast mode", which goes up to 400khz. stm32 supports up to 400khz.
+    things are different in fast mode: 4mhz input clock
+
+libmaple Implementation
+------------------------------------------------------------------------------
+
+i2c_init(port, freq)
+i2c_disable(port)
+
+// master stuff
+i2c_master_start_read(port, slave_addr, *data, len)  // wrapper around writeread
+i2c_master_start_write(port, slave_addr, *data, len) // wrapper around writeread
+i2c_master_start_writeread(port, slave_addr, *wdata, wlen, *rdata, rlen) 
+i2c_status()    // busy, success, or error. see below.
+
+// slave stuff
+// handler function should take a uint8 state, uint8 *data
+i2c_slave_set_addr(port, addr)          // set ACK high
+i2c_slave_set_handler(port, *function)  // initializes. 
+
+
+STM32 Processes
+------------------------------------------------------------------------------
+There is an application note.
+
+The stm32 is in slave mode by default; it enters master only when executing
+a request.  Each i2c port has an error and an event interrupt 
+
+How to init:
+ - setup pins
+ - setup peripheral input clock: 4MHz for fast mode
+ - configure clock control registers
+ - configure rise time register
+ - configure interrupts
+ - configure I2C_CR1 to enable the peripheral
+ - set ACK flag low: won't be a slave until addr is set
+
+How to master_write:
+ - START, addr[0:7], W, ACK, DATA[0:7], ACK, DATA[8:15], ..., STOP
+ - software sets START high, which toggles M/SL to master mode
+ - when START actually happens, SB is set and interrupt happens; hardware
+   waits until address is written to DR
+ - address shifts out and an interrupt is thrown with ADDR high; if LSB of
+   address was low, in transmitter mode. TRA reflects this
+ - software writes to the first byte to DR and clears ADDR
+ - first byte shifts out and when there's an ACK an interrupt is thrown
+   with TxE high; if no new byte was written to DR since the previous
+   transmission BTF goes high
+ - software writes next byte to DR and clears BTF, or sets STOP bit to end
+   data transmission, or sets START to begin next part of combined session
+ - after STOP is set, hardware goes back to slave mode
+
+How to master_read:
+ - START, addr[0:7], R, ACK, DATA[0:7], ACK, ..., NACK, DATA[-8:-1], STOP
+ - software sets START high, which toggles M/SL to master mode
+ - when START actually happens, SB is set and interrupt happens; hardware
+   waits until address is written to DR
+ - address shifts out and an interrupt is thrown with ADDR high; if LSB of
+   address was high, in receiver mode. TRA reflects this.
+ - software clears ADDR; hardware shifts in first byte from slave and sends ACK
+   if ACK is set. interrupt is thrown with RxNE high, with BTF set
+ - if only reading one byte, ACK should be set low and STOP high; hardware will
+   then NACK and STOP after reading
+ - software reads from DR and clears BTF bit. next byte is shifted in
+ - software sets NACK low after second-to-last byte is read by setting ACK low
+   after reading from DR, and either setting STOP or START high
+ - after STOP is set, hardware goes back to slave mode
+
+How to master_writeread:
+ - [START, addr[0:7], W, ACK, WDATA[0:7], ...], 
+   [START, addr[0:7], R, ACK, RDATA[0:7], ACK, ..., NACK, RDATA[-8:-1]]
+   STOP
+ - implement the above read/write but set START high instead of STOP high at
+   the end
+
+How to slave tx (master read):
+ - if address is matched, ACK is send (if ACK flag is high) and ADDR goes high;
+   event interrupt is triggered if ITEVFEN flag is set. TRA indicates whether
+   this is a read or write request
+ - program sets DR degister and clears ADDR flag; hardware will clock stretch
+   until ADDR is low
+ - if ITVENFEN and ITBUFEN are set, the TxE interrupt is triggered after the
+   byte is sent and the master ACKs. now the hardware stretches until BTF is
+   cleared before sending again.
+ - after the STOP is sent, hardware sets STOPF, throws an event if ITEVFEN is
+   high, and waits for a read of SR1 and write CR1
+
+How to slave rx (master write):
+ - if address is matched, ACK is send (if ACK flag is high) and ADDR goes high;
+   event interrupt is triggered if ITEVFEN flag is set. TRA indicates whether
+   this is a read or write request
+ - the hardware shifts in the byte to DR and sends an ACK if ACK flag is high
+ - if ITEVFEN and ITBUFEN are set, an RxNE interrupt is sent. hardware waits
+   until the BTF flag is reset
+ - after the STOP is sent, hardware sets STOPF, throws an event if ITEVFEN is
+   high, and waits for a read of SR1 and write CR1
+
+State
+------------------------------------------------------------------------------
+
+ uint8 state
+ uint16 target
+ uint8 *data
+ uint32 length
+ uint32 offset
+ functPtr *slave_handler 
+
+0 = SUCCESS/WAITING
+1 = BUSY_READ
+2 = BUSY_WRITE
+3 = SLAVE_START
+4 = SLAVE_STOP
+5 = SLAVE_READ
+6 = SLAVE_WRITE
+255 = ERROR
+
+TODO
+------------------------------------------------------------------------------
+- wirish implementation
+- update docs
+- "soft" implementation (bit banged)
+- greater flexibility (multi-master, higher speeds, read/write chaining)
+

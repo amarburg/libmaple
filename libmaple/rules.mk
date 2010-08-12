@@ -25,6 +25,7 @@ cSRCS_$(d) := systick.c                \
               rcc.c                    \
               flash.c                  \
               spi.c                    \
+              i2c.c                    \
               usb/usb.c                \
               usb/usb_callbacks.c      \
               usb/usb_hardware.c       \
