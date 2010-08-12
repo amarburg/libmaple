@@ -106,6 +106,8 @@ enum {
    RCC_TIMER4,
    RCC_SPI1,
    RCC_SPI2,
+   RCC_I2C1,
+   RCC_I2C2,
 };
 
 /* prescalers */

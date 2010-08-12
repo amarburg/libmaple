@@ -84,7 +84,7 @@ struct rcc_dev_info {
    const uint8 line_num;
 };
 
-/* device descriptor tables  */
+/* device descriptor tables; edit the enum in rcc.h as well  */
 static const struct rcc_dev_info rcc_dev_table[] = {
    [RCC_GPIOA]  = { .clk_domain = APB2, .line_num = 2 },
    [RCC_GPIOB]  = { .clk_domain = APB2, .line_num = 3 },
