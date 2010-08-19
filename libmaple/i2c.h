@@ -26,6 +26,7 @@
 #define _I2C_H_
 
 #include "ring_buffer.h"
+#include "gpio.h"
 
 #ifdef __cplusplus
 extern "C"{
@@ -121,23 +122,25 @@ struct i2c_dev {
    const uint8 rcc_dev_num;
    const uint8 nvic_ev_num;
    const uint8 nvic_er_num;
+   GPIO_Port *scl_pin_port; 
+   uint8 scl_pin_num; 
+   GPIO_Port *sda_pin_port; 
+   uint8 sda_pin_num; 
    uint8 state;
    uint16 target_address;
    uint8 *data;
    uint32 length;
    uint32 offset;
    void (*slave_handler)(uint8,uint8*);
-} i2c_dev;
+} ;
 
 // i2c states
 enum {
     I2C_SUCCESS, // or waiting
     I2C_BUSY_READ,
     I2C_BUSY_WRITE,
-    I2C_SLAVE_START,
-    I2C_SLAVE_STOP,
-    I2C_SLAVE_READ,
-    I2C_SLAVE_WRITE,
+    I2C_BUSY_START,
+    I2C_BUSY_STOP,
     I2C_ERROR,
 };
 
@@ -145,7 +148,7 @@ extern struct i2c_dev i2c_dev_table[];
 
 void i2c_init(uint8 i2c_num, uint32 freq);
 void i2c_disable(uint8 i2c_num);
-void i2c_status(uint8 i2c_num);
+uint8 i2c_status(uint8 i2c_num);
 
 void i2c_master_start_read(uint8 i2c_num, uint16 addr, uint8 *data, uint32 len);
 void i2c_master_start_write(uint8 i2c_num, uint16 addr, uint8 *data, uint32 len);

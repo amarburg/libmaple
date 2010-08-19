@@ -28,39 +28,39 @@
 #include "gpio.h"
 #include "i2c.h"
 
+// for millis()
+#include "systick.h"
+
 #define I2C1_BASE         0x40005400
 #define I2C2_BASE         0x40005800
 
-/* i2c descriptor table  */
+// i2c descriptor table; some values set during initialization
 struct i2c_dev i2c_dev_table[] = {
    [I2C1] = {
       .base = (i2c_port*)I2C1_BASE,
       .rcc_dev_num = RCC_I2C1,
       .nvic_ev_num = NVIC_I2C1_EV,
       .nvic_er_num = NVIC_I2C1_ER,
-      .state = I2C_SUCCESS,
-      .target_address = 0,
-      .data = 0,
-      .length = 0,
-      .offset = 0,
-      .slave_handler = 0,
+      .scl_pin_port = GPIOB_BASE,
+      .scl_pin_num = 6,
+      .sda_pin_port = GPIOB_BASE,
+      .sda_pin_num = 7,
    },
    [I2C2] = {
       .base = (i2c_port*)I2C2_BASE,
       .rcc_dev_num = RCC_I2C2,
       .nvic_ev_num = NVIC_I2C2_EV,
       .nvic_er_num = NVIC_I2C2_ER,
-      .state = I2C_SUCCESS,
-      .target_address = 0,
-      .data = 0,
-      .length = 0,
-      .offset = 0,
-      .slave_handler = 0,
+      .scl_pin_port = GPIOB_BASE,
+      .scl_pin_num = 10,
+      .sda_pin_port = GPIOB_BASE,
+      .sda_pin_num = 11,
    },
 };
 
 void i2c_init(uint8 i2c_num, uint32 freq) {
     i2c_port *port = i2c_dev_table[i2c_num].base;
+    struct i2c_dev dev = i2c_dev_table[i2c_num];
    
     // Configure the GPIO pins
     switch (i2c_num) {
@@ -118,188 +118,67 @@ void i2c_init(uint8 i2c_num, uint32 freq) {
     // configure I2C_CR1, I2C_CR2
     port->CR1 &= (~ (I2C_CR1_PEC | I2C_CR1_SMBUS | I2C_CR1_SMBTYPE | I2C_CR1_NOSTRETCH | I2C_CR1_POS)); 
     // enable all interrupts on the peripheral side
-    port->CR2 |= (I2C_CR2_ITBUFEN | I2C_CR2_ITEVTEN | I2C_CR2_ITBUFEN);
+    port->CR2 |= (I2C_CR2_ITBUFEN | I2C_CR2_ITEVTEN | I2C_CR2_ITERREN);
 
     // set ACK flag low: won't be a slave until addr is set
     port->CR1 &= (~ I2C_CR1_ACK);
 
-/*
     // setup state
-    state->busy = 0;                            // 0 = ready, 1 = busy
-    state->ack= 0;                            // not until slave address is set
-    state->slave_addr = 0;                       // the remote target
-    state->data = 0;                             // by the byte! chars! TODO: bad, null?
-    state->len = 0;                           // how much data?
-    state->index = 0;                           // where we're at
-    state->slave_begin_handler = 0;
-    state->slave_rx_handler = 0;
-    state->slave_tx_handler = 0;
-    state->slave_end_handler = 0;
-*/
+    dev.state = I2C_SUCCESS;
+    dev.target_address = 0;
+    dev.data = 0;
+    dev.length = 0;
+    dev.offset = 0;
+    dev.slave_handler = 0x0;
     
     // Re-enable port after configuration
     port->CR1 |= I2C_CR1_PE; 
 }
 
-// polling; for testing
-void i2c_send1(uint32 addr, uint32 data) {
-    i2c_port *port = i2c_dev_table[I2C1].base;
-    int I2C_TIMEOUT = 100;
-
-    uint32 startmillis = millis();
-    
-    port->CR1 |= I2C_CR1_START; 
-
-    while (! (port->SR1 & I2C_SR1_SB)) { 
-        asm volatile("nop");
-        if(millis() - startmillis > I2C_TIMEOUT) {
-            port->CR1 |= I2C_CR1_SWRST;     // timed out, freak out
-            port->CR1 &= (~I2C_CR1_SWRST);
-            return;
-        }
-    }
-    port->DR = (addr & 0x7F) << 1;
-    //port->DR = 0x8; // ADDR of slave device: "4" plus LSB is low for transmit
-    while (! ((port->SR1 & I2C_SR1_ADDR) && (port->SR2 & I2C_SR2_TRA))) { // addr accepted? transmitting?
-        asm volatile("nop");
-        if(millis() - startmillis > I2C_TIMEOUT) {
-            port->CR1 |= I2C_CR1_SWRST;     // timed out, freak out
-            port->CR1 &= (~I2C_CR1_SWRST);
-            return;
-        }
-    }
-    port->DR = (data & 0xFF); // set data
-    port->SR1 &= ~ I2C_SR1_ADDR; // clear addr
-    port->CR1 |= I2C_CR1_STOP; // only sending the one byte; this could be inserted above the DR write?
-
-    while (port->SR1 & I2C_SR1_STOPF) { 
-        asm volatile("nop");
-        if(millis() - startmillis > I2C_TIMEOUT) {
-            port->CR1 |= I2C_CR1_SWRST;     // timed out, freak out
-            port->CR1 &= (~I2C_CR1_SWRST);
-            return;
-        }
-    }
-}
-
-
-
-// polling; for testing
-uint8 i2c_read1(uint32 addr) {
-    i2c_port *port = i2c_dev_table[I2C1].base;
-
-    uint8 ret;
-    uint8 oldack = port->CR1 & I2C_CR1_ACK;
-    uint32 startmillis = millis();
-    int I2C_TIMEOUT = 100;
-
-    // set ACK flag low b/c we're going to NACK after the first byte
-    port->CR1 &= (~ I2C_CR1_ACK);
-
-    // start
-    port->CR1 |= I2C_CR1_START; 
-
-    port->DR = 0x9; // ADDR of slave device: "4" plus LSB is low for transmit
-    while (! (port->SR1 & I2C_SR1_SB)) { 
-        asm volatile("nop");
-        if(millis() - startmillis > I2C_TIMEOUT) {
-            port->CR1 |= I2C_CR1_SWRST;     // timed out, freak out
-            port->CR1 &= (~I2C_CR1_SWRST);
-            return 0; 
-        }
-    }
-    port->DR = ((addr & 0x7F) << 1) | 0x1;
-    //port->DR = 0x9; // ADDR of slave device: "4" plus LSB is low for transmit
-    
-    // addr accepted? transmitting?
-    while (! ((port->SR1 & I2C_SR1_ADDR) && (! (port->SR2 & I2C_SR2_TRA)))) { 
-        asm volatile("nop");
-        if(millis() - startmillis > I2C_TIMEOUT) {
-            port->CR1 |= I2C_CR1_SWRST;     // timed out, freak out
-            port->CR1 &= (~I2C_CR1_SWRST);
-            return 0;
-        }
-    }
-    port->SR1 &= (~ I2C_SR1_ADDR); // clear it
-    port->CR1 |= I2C_CR1_STOP;     // only reading the one byte
-    port->CR1 &= (~ I2C_CR1_ACK);
-
-    // stuff to read?
-    while (! (port->SR1 & I2C_SR1_RXNE)) { 
-        asm volatile("nop");
-        if(millis() - startmillis > I2C_TIMEOUT) {
-            port->CR1 |= I2C_CR1_SWRST;     // timed out, freak out
-            port->CR1 &= (~I2C_CR1_SWRST);
-            return 0;
-        }
-    }
-    ret = port->DR & 0xFF;          // get data
-
-    // ok we're done; return to previous state
-    if(oldack) {
-        port->CR1 |= I2C_CR1_ACK;
-    } else {
-        port->CR1 &= (~ I2C_CR1_ACK);
-    }
-    return ret;
-}
-
-/* -----------------------------------------------------------------------*/
 // completely tears down the periph?
 void i2c_disable(uint8 i2c_num) {
     i2c_port *port = i2c_dev_table[i2c_num].base;
+    struct i2c_dev dev = i2c_dev_table[i2c_num];
 
     port->CR1 &= (~ I2C_CR1_PE); // unset enable pin
     port->CR1 |= I2C_CR1_SWRST;  // reset the peripheral
     port->CR1 &= ~I2C_CR1_SWRST; // re-enable
     port->CR1 &= (~ I2C_CR1_PE); // unset enable pin again after reset
+
+    dev.state = I2C_SUCCESS;
+    dev.target_address = 0;
+    dev.data = 0;
+    dev.length = 0;
+    dev.offset = 0;
+    dev.slave_handler = 0x0;
+}
+
+uint8 i2c_status(uint8 i2c_num) {
+    struct i2c_dev dev = i2c_dev_table[i2c_num];
+    return dev.state;
 }
 
 /* -----------------------------------------------------------------------*/
 void i2c_master_start_write(uint8 i2c_num, uint16 addr, uint8 *data, uint32 len) {
     i2c_port *port = i2c_dev_table[i2c_num].base;
+    struct i2c_dev dev = i2c_dev_table[i2c_num];
 
-    uint32 startmillis = millis();
-
-    if(!len) {
-        return;
-    }
-
-    switch (i2c_num) {
-    case I2C1:
-        port = (i2c_port*)I2C1_BASE;
-    case I2C2:
-        // TODO: copy above
-    default:
-        ASSERT(0); // shouldn't ever get here
-    }
+    if(!len) { return; }
 
     // need to make sure any previous activity is wrapped up
-    /*
-    if((state->busy) || (port->SR2 & I2C_SR2_BUSY)) {
-        while(port->SR2 & I2C_SR2_BUSY) { 
-            delayMicroseconds(1);
-            if((millis() - startmillis) > I2C_TIMEOUT) {
-                // we timed out; probably some device is pulling SCL down
-                // indefinately
-                i2c_disable(i2c_num);
-                return; 
-            }
-        }
-        // this will increase the START high hold time, required for
-        // some slave devices
-        delayMicroseconds(10);
-    }
+    if(dev.state != I2C_SUCCESS) { return; }
 
-    state->busy = 1;
-    state->slave_addr = (addr & 0x8F) << 1;  // 7bit plus LSB low for write
-    state->len = len;
-    state->index = 0;
-    state->data = data;
-    */
+    // setup the device software state
+    dev.state = I2C_BUSY_WRITE;
+    dev.target_address = addr;
+    dev.data = data;
+    dev.length = len;
+    dev.offset = 0;
 
+    //state->slave_addr = (addr & 0x8F) << 1;  // 7bit plus LSB low for write
+    
     // ok, kick things off
-    port->CR2 |= (I2C_CR2_ITBUFEN | I2C_CR2_ITEVTEN | I2C_CR2_ITBUFEN);
+    port->CR2 |= (I2C_CR2_ITBUFEN | I2C_CR2_ITEVTEN);
     port->CR1 |= I2C_CR1_ACK;
     port->CR1 &= (~ I2C_CR1_STOP);
     port->CR1 |= I2C_CR1_START; 
@@ -379,11 +258,11 @@ void i2c_slave_set_handler(uint8 port, void (*handler)(uint8, uint8*)) {
 
 /* -----------------------------------------------------------------------*/
 void I2C1_EV_IRQHandler(void) {
-    /*
+//    ASSERT(0);
     i2c_port *port = (i2c_port*)I2C1_BASE;
-    
     uint16 SR1 = port->SR1;
     uint16 SR2 = port->SR2;
+    struct i2c_dev dev = i2c_dev_table[1];
 
     // are we master or slave?
     if(port->SR2 & I2C_SR2_MSL) { // we're MASTER
@@ -391,48 +270,54 @@ void I2C1_EV_IRQHandler(void) {
             // Start has happened:
             // - when START actually happens, SB is set and interrupt happens; hardware
             //   waits until address is written to DR
-            port->DR = i2c1_state.slave_addr;    // LSB already set
+            port->DR = (dev.target_address & 0x007F) << 1;
             port->CR1 |= I2C_CR1_ACK;
         } else if((SR2 & I2C_SR2_TRA) && (SR1 & I2C_SR1_ADDR)) {
             // Address sent and acknowledged; we are transmitting first byte
             // - address shifts out and an interrupt is thrown with ADDR high; if LSB of
             //   address was low, in transmitter mode. TRA reflects this
             // - software writes to the first byte to DR and clears ADDR
-            port->DR = i2c1_state.data[0];
+            port->DR = dev.data[0];
             port->SR1 &= ~ I2C_SR1_ADDR;    // clear ADDR bit
-            i2c1_state.index++;
-            if(i2c1_state.len == 1) {
+            dev.offset++;
+            if(dev.length == 1) {
                 port->CR1 |= I2C_CR1_STOP;  // only 1 byte so stop here
-                i2c1_state.busy = 0;
+                /*
+                //dev.state = I2C_SUCCESS;
                 if(i2c1_state.ack) {
                     port->CR1 |= I2C_CR1_ACK;
                 } else {
                     port->CR1 &= ~ I2C_CR1_ACK;
                 }
+                */
+                port->CR1 |= I2C_CR1_ACK;
             }
         //} else if((SR2 & I2C_SR2_TRA) && (SR1 & I2C_SR1_TXE)) {
         } else if(SR1 & I2C_SR1_TXE) {
             // Byte sent; time to send another
-            port->DR = i2c1_state.data[i2c1_state.index];
-            i2c1_state.index++;
-            if(i2c1_state.index >= i2c1_state.len) {   // this will be the last byte
+            port->DR = dev.data[dev.offset];
+            dev.offset++;
+            if(dev.offset >= dev.length) {   // this will be the last byte
                 port->CR1 |= I2C_CR1_STOP;
+                /*
                 i2c1_state.busy = 0;
                 if(i2c1_state.ack) {
                     port->CR1 |= I2C_CR1_ACK;
                 } else {
                     port->CR1 &= ~ I2C_CR1_ACK;
                 }
+                */
+                port->CR1 |= I2C_CR1_ACK;
             }
         } else if(!(SR2 & I2C_SR2_TRA) && (SR1 & I2C_SR1_ADDR)) {
             // Address sent and acknowledged; we are recieving first byte
             // - address shifts out and an interrupt is thrown with ADDR high; if LSB of
             //   address was low, in transmitter mode. TRA reflects this
-            if(i2c1_state.len == 1) {
+            if(dev.length == 1) {
                 port->CR1 &= ~ I2C_CR1_ACK;
                 port->SR1 &= ~ I2C_SR1_ADDR;    // clear ADDR bit
                 port->CR1 |= I2C_CR1_STOP;  // only 1 byte so stop here
-            } else if(i2c1_state.len == 2) {
+            } else if(dev.length == 2) {
                 port->CR1 &= ~ I2C_CR1_ACK;
                 port->SR1 &= ~ I2C_SR1_ADDR;    // clear ADDR bit
             } else {
@@ -442,17 +327,17 @@ void I2C1_EV_IRQHandler(void) {
         } else if(!(SR2 & I2C_SR2_TRA) && (SR1 & I2C_SR1_BTF)) {
             // TODO: there is an error here; the final RXNE interrupt never gets thrown
             // stuff to read!
-            if(i2c1_state.len == 2) {
+            if(dev.length == 2) {
                 port->CR1 |= I2C_CR1_STOP;  // only 1 byte so stop here
             }
-            i2c1_state.data[i2c1_state.index] = port->DR;
-            i2c1_state.index++;
+            dev.data[dev.offset] = port->DR;
+            dev.offset++;
             port->CR1 &= ~ I2C_CR1_POS;       // ugh
-            if(i2c1_state.index + 2 >= i2c1_state.len) {         // next will be the last byte
+            if(dev.offset + 2 >= dev.length) {         // next will be the last byte
                 port->CR1 &= ~ I2C_CR1_ACK;
                 port->CR1 |= I2C_CR1_STOP;
-            } else if(i2c1_state.index + 1 >= i2c1_state.len) {  // thie was the last byte
-                i2c1_state.busy = 0;
+            } else if(dev.offset + 1 >= dev.length) {  // thie was the last byte
+                //i2c1_state.busy = 0;
             }
         } else {
             // shouldn't ever get here
@@ -462,12 +347,13 @@ void I2C1_EV_IRQHandler(void) {
         ASSERT(0);
     } 
     return;
-    */
 }
 
 /* -----------------------------------------------------------------------*/
 void I2C1_ER_IRQHandler(void) {
     //i2c_disable(I2C_PORT1);     // TODO: something more reasonable
+    struct i2c_dev dev = i2c_dev_table[I2C1];
+    dev.state = I2C_ERROR;
     ASSERT(0);  // for testing/debugging
     return;
 }
@@ -480,6 +366,8 @@ void I2C2_EV_IRQHandler(void) {
 
 /* -----------------------------------------------------------------------*/
 void I2C2_ER_IRQHandler(void) {
+    struct i2c_dev dev = i2c_dev_table[I2C2];
+    dev.state = I2C_ERROR;
     ASSERT(0);  // for testing/debugging
     return;
 }
