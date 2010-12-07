@@ -31,6 +31,7 @@
 #define _USART_H_
 
 #include "ring_buffer.h"
+#include "gpio.h"
 
 #ifdef __cplusplus
 extern "C"{
@@ -59,19 +60,19 @@ typedef struct usart_port {
 } usart_port;
 
 /* usart pin mapping */
-struct usart_pins {
+typedef struct usart_pins {
   GPIO_Port *gpio_port;
-  uint8 tx_pin;
-  uint8 rx_pin;
-  uint8 ck_pin;
-  uint8 timer_num;
-  uint8 compare_num;
-};
+  const uint8 tx_pin;
+  const uint8 rx_pin;
+  const uint8 ck_pin;
+  const uint8 timer_num;
+  const uint8 compare_num;
+} usart_pins;
 
 /* usart descriptor  */
 struct usart_dev {
     usart_port *base;
-    const usart_pins *pins;
+    usart_pins *pins;
     ring_buffer rb;
     uint8 rx_buf[64];
     const uint8 rcc_dev_num;
