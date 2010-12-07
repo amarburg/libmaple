@@ -58,9 +58,17 @@ typedef struct usart_port {
     volatile uint32 GTPR;     // Guard time and prescaler register
 } usart_port;
 
+/* usart pin mapping */
+struct usart_pins {
+  GPIO_Port *gpio_port;
+  uint8 tx_pin;
+  uint8 rx_pin;
+};
+
 /* usart descriptor  */
 struct usart_dev {
     usart_port *base;
+    const usart_pins *pins;
     ring_buffer rb;
     uint8 rx_buf[64];
     const uint8 rcc_dev_num;
