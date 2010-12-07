@@ -63,6 +63,9 @@ struct usart_pins {
   GPIO_Port *gpio_port;
   uint8 tx_pin;
   uint8 rx_pin;
+  uint8 ck_pin;
+  uint8 timer_num;
+  uint8 compare_num;
 };
 
 /* usart descriptor  */

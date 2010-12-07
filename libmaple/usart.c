@@ -49,17 +49,24 @@ const struct usart_pins usart_pins_table[] = {
   [USART1] = {
     gpio_port = GPIOA_BASE,
     tx_pin = 9,
-    rx_pin = 10
+    rx_pin = 10,
+    ck_pin = 8,
+    timer_num = TIMER1,
+    compare_num = 2
   },
   [USART2] = {
     gpio_port = GPIOA_BASE,
     tx_pin = 2,
-    rx_pin = 3
+    rx_pin = 3,
+    ck_pin = 4,
+    timer_num = TIMER2,
+    compare_num = 3
   },
   [USART3] = {
     gpio_port = GPIOB_BASE,
     tx_pin = 10,
-    rx_pin = 11
+    rx_pin = 11,
+    ck_pin = 12
   }
 }
 
