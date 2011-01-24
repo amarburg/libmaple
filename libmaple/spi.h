@@ -111,6 +111,9 @@ static inline uint8 spi_rx(uint32 spi_num) {
     return spi->DR;
 }
 
+void spi_disable( uint32 spi_num );
+
+
 #ifdef __cplusplus
 }
 #endif

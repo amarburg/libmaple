@@ -159,3 +159,17 @@ static void spi_gpio_cfg(const spi_dev *dev) {
     gpio_set_mode(dev->port, dev->miso_pin, GPIO_MODE_AF_OUTPUT_PP);
     gpio_set_mode(dev->port, dev->mosi_pin, GPIO_MODE_AF_OUTPUT_PP);
 }
+
+void spi_disable( uint32 spi_num )
+{
+  ASSERT(spi_num == 1 || spi_num == 2);
+  switch( spi_num ) {
+    case 1:
+      rcc_reset_dev( RCC_SPI1 );
+      break;
+    case 2:
+      rcc_reset_dev( RCC_SPI2 );
+      break;
+  }
+}
+
