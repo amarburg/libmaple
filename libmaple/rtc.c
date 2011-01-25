@@ -1,4 +1,8 @@
 /******************************************************************************
+ * Functions for dealing with the RTC module.
+ * Based heavily on Martin Thomas' functions, which relied
+ * on the CMSIS.  This code does not use the CMSIS.
+ *
  * The MIT License
  *
  * Copyright (c) 2010 Aaron Marburg
@@ -29,6 +33,83 @@
 #include "libmaple.h"
 #include "rcc.h"
 #include "rtc.h"
+
+
+
+#ifdef RTC_USE_DST
+// A big block of daylight-savings related functions.
+// Drawn largely from Martin Thomas, who in turn
+// drew it from around the internet.
+
+/**
+ * @brief Is the given time within the Daylight Savings time period.
+ * @param t  An RTC_t time structure
+ * @return   true if DST, false if not
+ */
+static bool isDST( const RTC_t *t )
+{
+  uint8_t wday, month;            // locals for faster access
+
+  month = t->month;
+
+  if( month < 3 || month > 10 ) {         // month 1, 2, 11, 12
+    return false;                                   // -> Winter
+  }
+
+  wday  = t->wday;
+
+  if( t->mday - wday >= 25 && (wday || t->hour >= 2) ) { // after last Sunday 2:00
+    if( month == 10 ) {                             // October -> Winter
+      return false;
+    }
+  } else {                                                        // before last Sunday 2:00
+    if( month == 3 ) {                              // March -> Winter
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/**
+ * @brief Adjusts and RTC_t for DST if needed
+ * @param t  A non-DST RTC_t time structure
+ * @return   true if DST, false if not
+ */
+static bool adjustDST( RTC_t *t )
+{
+  uint8_t hour, day, wday, month;                 // locals for faster access
+
+  hour  = t->hour;
+  day   = t->mday;
+  wday  = t->wday;
+  month = t->month;
+
+  if ( isDST(t) ) {
+    t->dst = 1;
+    hour++;                                                         // add one hour
+    if( hour == 24 ){                                       // next day
+      hour = 0;
+      wday++;                                                 // next weekday
+      if( wday == 7 ) {
+        wday = 0;
+      }
+      if( day == DaysInMonth[month-1] ) {             // next month
+        day = 0;
+        month++;
+      }
+      day++;
+    }
+    t->month = month;
+    t->hour  = hour;
+    t->mday  = day;
+    t->wday  = wday;
+    return true;
+  } else {
+    t->dst = 0;
+    return false;
+
+#endif
 
 /**
  * @brief Initialize the realtime clock.

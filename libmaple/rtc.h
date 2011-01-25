@@ -37,6 +37,12 @@ extern "C" {
 #include <stdint.h>
 #include <stdbool.h>
 
+
+// If defined, the stored time will accomodate daylight
+// savings.  If not defined, the stored time will
+// ignore daylight savings (i.e. if storing GST)
+//#define RTC_USE_DST
+
 typedef struct {
   uint16_t year;  /* 1..4095 */
   uint8_t  month; /* 1..12 */
