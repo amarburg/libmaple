@@ -36,8 +36,8 @@
 
 HardwareSerial Serial1(USART1, 4500000UL, GPIOA_BASE, 9, 10, TIMER1, 2);
 //HardwareSerial Serial2(USART2, 2250000UL, GPIOA_BASE, 2, 3,  TIMER2, 3);
-HardwareSerial Serial3(USART3, 2250000UL, GPIOB_BASE, 10, 11, 0, 0);
-/ TODO: High density device ports
+HardwareSerial Serial3(USART3, 2250000UL, GPIOB_BASE, 10, 11, TIMER3, 0);
+// TODO: High density device ports
 
 HardwareSerial::HardwareSerial(uint8 usart_num,
                                uint32 max_baud,
