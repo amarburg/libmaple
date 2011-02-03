@@ -177,6 +177,7 @@ void spi_set_prescaler( uint32 spi_num, uint32 prescale )
 {
     ASSERT(spi_num == 1 || spi_num == 2);
     SPI *spi;
+    uint32 cr1 = 0;
 
     switch (spi_num) {
     case 1:
@@ -189,8 +190,9 @@ void spi_set_prescaler( uint32 spi_num, uint32 prescale )
         break;
     }
 
-   /* Really should wait for communications to finish */
+   /* Really should make sure communications has finished */
   spi->CR1 &= ~CR1_SPE;
-  spi->CR1 |= (spi->CR1 & ~CR1_BR) | prescale;
-  spi->CR1 |= CR1_SPE;
+  cr1 = spi->CR1;
+  cr1 = (cr1 & ~CR1_BR) | prescale;
+  spi->CR1 = cr1 | CR1_SPE;
 }
