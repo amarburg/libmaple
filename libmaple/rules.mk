@@ -22,7 +22,6 @@ cSRCS_$(d) := systick.c                \
               usart.c                  \
               util.c                   \
               rcc.c                    \
-	      rtc.c                    \
               flash.c                  \
               spi.c                    \
               fsmc.c                   \
