@@ -156,7 +156,7 @@ uint8 spi_tx(uint32 spi_num, uint8 *buf, uint32 len) {
 
 static void spi_gpio_cfg(const spi_dev *dev) {
     gpio_set_mode(dev->port, dev->sck_pin, GPIO_MODE_AF_OUTPUT_PP);
-    gpio_set_mode(dev->port, dev->miso_pin, GPIO_MODE_AF_OUTPUT_PP);
+    gpio_set_mode(dev->port, dev->miso_pin, GPIO_MODE_INPUT_PU);
     gpio_set_mode(dev->port, dev->mosi_pin, GPIO_MODE_AF_OUTPUT_PP);
 }
 
@@ -173,3 +173,26 @@ void spi_disable( uint32 spi_num )
   }
 }
 
+void spi_set_prescaler( uint32 spi_num, uint32 prescale )
+{
+    ASSERT(spi_num == 1 || spi_num == 2);
+    SPI *spi;
+    uint32 cr1 = 0;
+
+    switch (spi_num) {
+    case 1:
+        /* limit to 18 mhz max speed  */
+        ASSERT(prescale != CR1_BR_PRESCALE_2);
+        spi = (SPI*)SPI1_BASE;
+        break;
+    case 2:
+        spi = (SPI*)SPI2_BASE;
+        break;
+    }
+
+   /* Really should make sure communications has finished */
+  spi->CR1 &= ~CR1_SPE;
+  cr1 = spi->CR1;
+  cr1 = (cr1 & ~CR1_BR) | prescale;
+  spi->CR1 = cr1 | CR1_SPE;
+}

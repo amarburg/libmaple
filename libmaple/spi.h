@@ -113,6 +113,8 @@ static inline uint8 spi_rx(uint32 spi_num) {
 
 void spi_disable( uint32 spi_num );
 
+void spi_set_prescaler( uint32 spi_num, uint32 prescale );
+
 
 #ifdef __cplusplus
 }
