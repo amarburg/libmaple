@@ -29,6 +29,7 @@
 #include "libmaple.h"
 #include "rcc.h"
 #include "nvic.h"
+#include "timers.h"
 #include "usart.h"
 
 #define USART1_BASE    0x40013800
@@ -44,22 +45,52 @@
 #define USART_RXNEIE   BIT(5)  // read data register not empty interrupt enable
 #define USART_TC       BIT(6)
 
+struct usart_pins usart_pins_table[] = {
+  [USART1] = {
+    .gpio_port = GPIOA_BASE,
+    .tx_pin = 9,
+    .rx_pin = 10,
+    .ck_pin = 8,
+    .timer_num = TIMER1,
+    .compare_num = 2
+  },
+  [USART2] = {
+    .gpio_port = GPIOA_BASE,
+    .tx_pin = 2,
+    .rx_pin = 3,
+    .ck_pin = 4,
+    .timer_num = TIMER2,
+    .compare_num = 3
+  },
+  [USART3] = {
+    .gpio_port = GPIOB_BASE,
+    .tx_pin = 10,
+    .rx_pin = 11,
+    .ck_pin = 12
+    .timer_num = TIMER_INVALID
+    .compare_num = 0
+  }
+}; 
+
 /* usart descriptor table  */
 struct usart_dev usart_dev_table[] = {
     [USART1] = {
         .base = (usart_port*)USART1_BASE,
         .rcc_dev_num = RCC_USART1,
-        .nvic_dev_num = NVIC_USART1
+        .nvic_dev_num = NVIC_USART1,
+        .pins = &(usart_pins_table[USART1])
     },
     [USART2] = {
         .base = (usart_port*)USART2_BASE,
         .rcc_dev_num = RCC_USART2,
-        .nvic_dev_num = NVIC_USART2
+        .nvic_dev_num = NVIC_USART2,
+        .pins = &(usart_pins_table[USART2])
     },
     [USART3] = {
         .base = (usart_port*)USART3_BASE,
         .rcc_dev_num = RCC_USART3,
-        .nvic_dev_num = NVIC_USART3
+        .nvic_dev_num = NVIC_USART3,
+        .pins = &(usart_pins_table[USART3])
     },
     /*
       #if NR_USART >= 5

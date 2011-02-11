@@ -68,7 +68,11 @@ class HardwareSerial : public Print {
     using Print::write;
 };
 extern HardwareSerial Serial1;
+
+#ifndef DISABLE_SERIAL2
 extern HardwareSerial Serial2;
+#endif
+
 extern HardwareSerial Serial3;
 // TODO: high density device ports
 #endif

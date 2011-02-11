@@ -34,9 +34,13 @@
 #include "gpio.h"
 #include "timers.h"
 
-HardwareSerial Serial1(USART1, 4500000UL, GPIOA_BASE,  9,10, TIMER1, 2);
-HardwareSerial Serial2(USART2, 2250000UL, GPIOA_BASE,  2, 3, TIMER2, 3);
-HardwareSerial Serial3(USART3, 2250000UL, GPIOB_BASE, 10,11, TIMER_INVALID, 0);
+// TODO:  The hardware configuration (GPIO, pins, timer, compare_num)
+// could now be pulled from the libmaple/uart.h pin configuration struct.
+HardwareSerial Serial1(USART1, 4500000UL, GPIOA_BASE, 9, 10, TIMER1, 2);
+#ifndef DISABLE_SERIAL2
+HardwareSerial Serial2(USART2, 2250000UL, GPIOA_BASE, 2, 3,  TIMER2, 3);
+#endif
+HardwareSerial Serial3(USART3, 2250000UL, GPIOB_BASE, 10, 11, TIMER_INVALID, 0);
 // TODO: High density device ports
 
 HardwareSerial::HardwareSerial(uint8 usart_num,

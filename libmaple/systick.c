@@ -63,8 +63,10 @@ void systick_resume() {
             SYSTICK_TICKINT);
 }
 
+#ifndef USER_PROVIDES_SYSTICK_HANDLER
 void SysTickHandler(void) {
     systick_timer_millis++;
 }
+#endif
 
 
