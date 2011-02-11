@@ -67,6 +67,8 @@ struct usart_pins usart_pins_table[] = {
     .tx_pin = 10,
     .rx_pin = 11,
     .ck_pin = 12
+    .timer_num = TIMER_INVALID
+    .compare_num = 0
   }
 }; 
 
