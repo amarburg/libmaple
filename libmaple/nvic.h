@@ -78,6 +78,8 @@ enum {
     NVIC_EXTI4        = 10,
     NVIC_EXTI9_5      = 23,
     NVIC_EXTI15_10    = 40,
+
+    NVIC_ADC1_2       = 18,
 };
 
 
