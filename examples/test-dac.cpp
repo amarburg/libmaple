@@ -1,53 +1,51 @@
+/*
+ * Simple DAC test.
+ *
+ * Author: Marti Bolivar <mbolivar@leaflabs.com>
+ *
+ * This file is released into the public domain.
+ */
 
 #include "wirish.h"
-#include "fsmc.h"
-#include "rcc.h"
-#include "gpio.h"
 #include "dac.h"
 
-#define LED_PIN  23 // hack for maple native
-#define DISC_PIN 14 // hack for USB on native
-
-int toggle = 0;
 uint16 count = 0;
 
 void setup() {
+    pinMode(BOARD_LED_PIN, OUTPUT);
+    digitalWrite(BOARD_LED_PIN, HIGH);
 
-   pinMode(LED_PIN, OUTPUT);
-   pinMode(DISC_PIN, OUTPUT);
-   digitalWrite(DISC_PIN,1);
-   digitalWrite(LED_PIN,1);
+    Serial1.begin(9600);
+    Serial1.println("**** Beginning DAC test");
 
-   Serial1.begin(9600);
-   Serial1.println("Hello World!");
-
-   Serial1.print("Init... ");
-   dac_init();
-   Serial1.println("Done.");
+    Serial1.print("Init... ");
+    dac_init(DAC, DAC_CH1 | DAC_CH2);
+    Serial1.println("Done.");
 }
 
 void loop() {
-   digitalWrite(LED_PIN, toggle);
-   toggle ^= 1;
-   delay(100);
+    toggleLED();
+    delay(100);
 
-   count += 100;
+    count += 100;
+    if (count > 4095) {
+        count = 0;
+    }
 
-   if(count > 4095) {
-      count = 0;
-   }
+    dac_write_channel(DAC, 1, 4095 - count);
+    dac_write_channel(DAC, 2, count);
+}
 
-   dac_write(1, 2048);
-   dac_write(2, count);
+__attribute__((constructor)) void premain() {
+    init();
 }
 
 int main(void) {
-   init();
-   setup();
+    setup();
 
-   while (1) {
-      loop();
-   }
-   return 0;
+    while (true) {
+        loop();
+    }
+    return 0;
 }
 
