@@ -24,14 +24,13 @@
  * SOFTWARE.
  *****************************************************************************/
 
+/**
+ * @file pwr.c
+ * @brief Power control (PWR) support.
+ */
+
 #include "pwr.h"
 #include "rcc.h"
-
-pwr_dev pwr = {
-    .regs = PWR_BASE,
-};
-
-const pwr_dev *PWR = &pwr;
 
 /**
  * Enables the power interface clock, and resets the power device.

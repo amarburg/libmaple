@@ -24,6 +24,11 @@
  * SOFTWARE.
  *****************************************************************************/
 
+/**
+ * @file bkp.c
+ * @brief Backup register support.
+ */
+
 #include "bkp.h"
 #include "pwr.h"
 #include "rcc.h"
@@ -34,7 +39,7 @@ static inline __io uint32* data_register(uint8 reg);
 bkp_dev bkp = {
     .regs = BKP_BASE,
 };
-
+/** Backup device. */
 const bkp_dev *BKP = &bkp;
 
 /**

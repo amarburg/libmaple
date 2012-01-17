@@ -3,28 +3,30 @@
  *
  * Copyright (c) 2010 Bryan Newbold.
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use, copy,
+ * modify, merge, publish, distribute, sublicense, and/or sell copies
+ * of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
  *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
  *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+ * BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+ * ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+ * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
  *****************************************************************************/
 
 /**
  * @file dac.h
- * @brief Digital to analog converter header file
+ * @brief Digital to analog converter support.
  */
 
 /* See notes/dac.txt for more info */
@@ -62,14 +64,14 @@ typedef struct dac_reg_map {
                               holding register */
     __io uint32 DHR12LD; /**< Dual DAC 12-bit left-aligned data
                               holding register */
-    __io uint32 DHR8RD;  /**< Dual DAC 8-bit left-aligned data holding
+    __io uint32 DHR8RD;  /**< Dual DAC 8-bit right-aligned data holding
                               register */
     __io uint32 DOR1;    /**< Channel 1 data output register */
     __io uint32 DOR2;    /**< Channel 2 data output register */
 } dac_reg_map;
 
 /** DAC register map base address */
-#define DAC_BASE                ((dac_reg_map*)0x40007400)
+#define DAC_BASE                ((struct dac_reg_map*)0x40007400)
 
 /*
  * Devices
@@ -80,7 +82,6 @@ typedef struct dac_dev {
     dac_reg_map *regs; /**< Register map */
 } dac_dev;
 
-/** DAC device. */
 extern const dac_dev *DAC;
 
 /*

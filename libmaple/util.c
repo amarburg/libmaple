@@ -3,26 +3,29 @@
  *
  * Copyright (c) 2010 Perry Hung.
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use, copy,
+ * modify, merge, publish, distribute, sublicense, and/or sell copies
+ * of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
  *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
  *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+ * BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+ * ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+ * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
  *****************************************************************************/
 
 /**
+ * @file util.c
  * @brief Utility procedures for debugging, mostly an error LED fade
  * and messages dumped over a UART for failed asserts.
  */
@@ -37,7 +40,7 @@
 /* Failed ASSERT()s send out a message using this USART config. */
 #ifndef ERROR_USART
 #define ERROR_USART            USART2
-#define ERROR_USART_CLK_SPEED  72000000UL
+#define ERROR_USART_CLK_SPEED  STM32_PCLK1
 #define ERROR_USART_BAUD       9600
 #define ERROR_TX_PORT          GPIOA
 #define ERROR_TX_PIN           2
@@ -78,6 +81,16 @@ void __error(void) {
 }
 
 /**
+ * @brief Enable the error USART for writing.
+ * @sideeffect Configures ERROR_USART appropriately for writing.
+ */
+void _enable_error_usart() {
+    gpio_set_mode(ERROR_TX_PORT, ERROR_TX_PIN, GPIO_AF_OUTPUT_PP);
+    usart_init(ERROR_USART);
+    usart_set_baud_rate(ERROR_USART, ERROR_USART_CLK_SPEED, ERROR_USART_BAUD);
+}
+
+/**
  * @brief Print an error message on a UART upon a failed assertion
  *        and throb the error LED, if there is one defined.
  * @param file Source file of failed assertion
@@ -87,9 +100,7 @@ void __error(void) {
  */
 void _fail(const char* file, int line, const char* exp) {
     /* Initialize the error USART */
-    gpio_set_mode(ERROR_TX_PORT, ERROR_TX_PIN, GPIO_AF_OUTPUT_PP);
-    usart_init(ERROR_USART);
-    usart_set_baud_rate(ERROR_USART, ERROR_USART_CLK_SPEED, ERROR_USART_BAUD);
+    _enable_error_usart();
 
     /* Print failed assert message */
     usart_putstr(ERROR_USART, "ERROR: FAILED ASSERT(");
@@ -101,7 +112,31 @@ void _fail(const char* file, int line, const char* exp) {
     usart_putc(ERROR_USART, '\n');
     usart_putc(ERROR_USART, '\r');
 
-    /* Error fade */
+    /* Shutdown and error fade */
+    __error();
+}
+
+/**
+ * @brief Provide an __assert_func handler to libc so that calls to assert() get
+ *        redirected to _fail.
+ */
+void __assert_func(const char* file, int line, const char* method,
+                   const char* expression) {
+    _fail(file, line, expression);
+}
+
+/**
+ * @brief Provide an abort() implementation that aborts execution and enters an
+ *        error state with the throbbing LED indicator.
+ */
+void abort() {
+    /* Initialize the error USART */
+    _enable_error_usart();
+
+    /* Print abort message. */
+    usart_putstr(ERROR_USART, "ERROR: PROGRAM ABORTED VIA abort()\n\r");
+
+    /* Shutdown and error fade */
     __error();
 }
 

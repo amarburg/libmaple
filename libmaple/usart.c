@@ -26,7 +26,7 @@
 
 /**
  * @file usart.c
- * @author Marti Bolivar <mbolivar@leaflabs.com,
+ * @author Marti Bolivar <mbolivar@leaflabs.com>,
  *         Perry Hung <perry@leaflabs.com>
  * @brief USART control routines
  */
@@ -45,6 +45,7 @@ static usart_dev usart1 = {
     .clk_id   = RCC_USART1,
     .irq_num  = NVIC_USART1
 };
+/** USART1 device */
 usart_dev *USART1 = &usart1;
 
 static ring_buffer usart2_rb;
@@ -55,6 +56,7 @@ static usart_dev usart2 = {
     .clk_id   = RCC_USART2,
     .irq_num  = NVIC_USART2
 };
+/** USART2 device */
 usart_dev *USART2 = &usart2;
 
 static ring_buffer usart3_rb;
@@ -65,6 +67,7 @@ static usart_dev usart3 = {
     .clk_id   = RCC_USART3,
     .irq_num  = NVIC_USART3
 };
+/** USART3 device */
 usart_dev *USART3 = &usart3;
 
 #ifdef STM32_HIGH_DENSITY
@@ -76,6 +79,7 @@ static usart_dev uart4 = {
     .clk_id   = RCC_UART4,
     .irq_num  = NVIC_UART4
 };
+/** UART4 device */
 usart_dev *UART4 = &uart4;
 
 static ring_buffer uart5_rb;
@@ -86,6 +90,7 @@ static usart_dev uart5 = {
     .clk_id   = RCC_UART5,
     .irq_num  = NVIC_UART5
 };
+/** UART5 device */
 usart_dev *UART5 = &uart5;
 #endif
 
@@ -184,6 +189,22 @@ uint32 usart_tx(usart_dev *dev, const uint8 *buf, uint32 len) {
         regs->DR = buf[txed++];
     }
     return txed;
+}
+
+/**
+ * @brief Nonblocking USART receive.
+ * @param dev Serial port to receive bytes from
+ * @param buf Buffer to store received bytes into
+ * @param len Maximum number of bytes to store
+ * @return Number of bytes received
+ */
+uint32 usart_rx(usart_dev *dev, uint8 *buf, uint32 len) {
+    uint32 rxed = 0;
+    while (usart_data_available(dev) && rxed < len) {
+        *buf++ = usart_getc(dev);
+        rxed++;
+    }
+    return rxed;
 }
 
 /**

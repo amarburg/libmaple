@@ -27,12 +27,16 @@
 /**
  * @file   maple_RET6.cpp
  * @author Marti Bolivar <mbolivar@leaflabs.com>
- * @brief  Maple RET6 Edition PIN_MAP and boardInit()
+ * @brief  Maple RET6 Edition board file
  */
+
+#ifdef BOARD_maple_RET6
 
 #include "maple_RET6.h"
 
-#ifdef BOARD_maple_RET6
+#include "gpio.h"
+#include "timer.h"
+#include "wirish_types.h"
 
 void boardInit(void) {
 }
@@ -96,12 +100,14 @@ extern const stm32_pin_info PIN_MAP[BOARD_NR_GPIO_PINS] = {
     {GPIOB,   NULL, NULL,  4, 0, ADCx}, /* D43/PB4  */
 };
 
+/* Note: Do NOT include pin 38 (TIM8_CH4), as that's BOARD_BUTTON_PIN
+ * and thus not broken out to a header. */
 extern const uint8 boardPWMPins[BOARD_NR_PWM_PINS] __FLASH__ = {
-    0, 1, 2, 3, 5, 6, 7, 8, 9, 11, 12, 14, 24, 25, 27, 28
+    0, 1, 2, 3, 5, 6, 7, 8, 9, 11, 12, 14, 24, 27, 28, 35, 36, 37
 };
 
 extern const uint8 boardADCPins[BOARD_NR_ADC_PINS] __FLASH__ = {
-    0, 1, 2, 10, 11, 12, 13, 15, 16, 17, 18, 19, 20, 27, 28
+    0, 1, 2, 3, 10, 11, 12, 15, 16, 17, 18, 19, 20, 27, 28
 };
 
 extern const uint8 boardUsedPins[BOARD_NR_USED_PINS] __FLASH__ = {

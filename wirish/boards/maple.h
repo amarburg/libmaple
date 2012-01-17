@@ -30,8 +30,6 @@
  * @brief  Private include file for Maple in boards.h
  */
 
-#include "wirish_types.h"
-
 #ifndef _BOARD_MAPLE_H_
 #define _BOARD_MAPLE_H_
 
@@ -70,7 +68,7 @@
 #define BOARD_NR_GPIO_PINS      44
 
 /* Number of pins capable of PWM output */
-#define BOARD_NR_PWM_PINS       16
+#define BOARD_NR_PWM_PINS       15
 
 /* Number of pins capable of ADC conversion */
 #define BOARD_NR_ADC_PINS       15
@@ -79,13 +77,16 @@
  * these are just BOARD_LED_PIN and BOARD_BUTTON_PIN. */
 #define BOARD_NR_USED_PINS       7
 
-/*
- * Debug port pins
- */
+/* Debug port pins */
 #define BOARD_JTMS_SWDIO_PIN    39
 #define BOARD_JTCK_SWCLK_PIN    40
 #define BOARD_JTDI_PIN          41
 #define BOARD_JTDO_PIN          42
 #define BOARD_NJTRST_PIN        43
+
+/* USB configuration.  BOARD_USB_DISC_DEV is the GPIO port containing
+ * the USB_DISC pin, and BOARD_USB_DISC_BIT is that pin's bit. */
+#define BOARD_USB_DISC_DEV      GPIOC
+#define BOARD_USB_DISC_BIT      12
 
 #endif

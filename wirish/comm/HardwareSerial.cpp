@@ -3,23 +3,25 @@
  *
  * Copyright (c) 2010 Perry Hung.
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use, copy,
+ * modify, merge, publish, distribute, sublicense, and/or sell copies
+ * of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
  *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
  *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+ * BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+ * ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+ * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
  *****************************************************************************/
 
 /**
@@ -27,6 +29,7 @@
  * @brief Wirish serial port implementation.
  */
 
+#include "libmaple.h"
 #include "gpio.h"
 #include "timer.h"
 
@@ -46,15 +49,14 @@
 #define RX5 BOARD_UART5_RX_PIN
 #endif
 
-// TODO Put these magic numbers into boards.h #defines
-HardwareSerial Serial1(USART1, TX1, RX1, 72000000UL);
+HardwareSerial Serial1(USART1, TX1, RX1, STM32_PCLK2);
 #ifndef DISABLE_SERIAL2
-HardwareSerial Serial2(USART2, TX2, RX2, 36000000UL);
+HardwareSerial Serial2(USART2, TX2, RX2, STM32_PCLK1);
 #endif
-HardwareSerial Serial3(USART3, TX3, RX3, 36000000UL);
+HardwareSerial Serial3(USART3, TX3, RX3, STM32_PCLK1);
 #if defined(STM32_HIGH_DENSITY) && !defined(BOARD_maple_RET6)
-HardwareSerial Serial4(UART4,  TX4, RX4, 36000000UL);
-HardwareSerial Serial5(UART5,  TX5, RX5, 36000000UL);
+HardwareSerial Serial4(UART4,  TX4, RX4, STM32_PCLK1);
+HardwareSerial Serial5(UART5,  TX5, RX5, STM32_PCLK1);
 #endif
 
 HardwareSerial::HardwareSerial(usart_dev *usart_device,
@@ -67,17 +69,9 @@ HardwareSerial::HardwareSerial(usart_dev *usart_device,
     this->rx_pin = rx_pin;
 }
 
-uint8 HardwareSerial::read(void) {
-    return usart_getc(usart_device);
-}
-
-uint32 HardwareSerial::available(void) {
-    return usart_data_available(usart_device);
-}
-
-void HardwareSerial::write(unsigned char ch) {
-    usart_putc(usart_device, ch);
-}
+/*
+ * Set up/tear down
+ */
 
 void HardwareSerial::begin(uint32 baud) {
     ASSERT(baud <= usart_device->max_baud);
@@ -104,6 +98,22 @@ void HardwareSerial::begin(uint32 baud) {
 
 void HardwareSerial::end(void) {
     usart_disable(usart_device);
+}
+
+/*
+ * I/O
+ */
+
+uint8 HardwareSerial::read(void) {
+    return usart_getc(usart_device);
+}
+
+uint32 HardwareSerial::available(void) {
+    return usart_data_available(usart_device);
+}
+
+void HardwareSerial::write(unsigned char ch) {
+    usart_putc(usart_device, ch);
 }
 
 void HardwareSerial::flush(void) {

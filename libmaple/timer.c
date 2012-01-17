@@ -40,7 +40,7 @@
  * [7] = BRK. */
 #define NR_ADV_HANDLERS                 8
 /* Update, capture/compare 1,2,3,4; <junk>; trigger. */
-#define NR_GEN_HANDLERS                 6
+#define NR_GEN_HANDLERS                 7
 /* Update only. */
 #define NR_BAS_HANDLERS                 1
 
@@ -50,6 +50,7 @@ static timer_dev timer1 = {
     .type         = TIMER_ADVANCED,
     .handlers     = { [NR_ADV_HANDLERS - 1] = 0 },
 };
+/** Timer 1 device (advanced) */
 timer_dev *TIMER1 = &timer1;
 
 static timer_dev timer2 = {
@@ -58,6 +59,7 @@ static timer_dev timer2 = {
     .type         = TIMER_GENERAL,
     .handlers     = { [NR_GEN_HANDLERS - 1] = 0 },
 };
+/** Timer 2 device (general-purpose) */
 timer_dev *TIMER2 = &timer2;
 
 static timer_dev timer3 = {
@@ -66,6 +68,7 @@ static timer_dev timer3 = {
     .type         = TIMER_GENERAL,
     .handlers     = { [NR_GEN_HANDLERS - 1] = 0 },
 };
+/** Timer 3 device (general-purpose) */
 timer_dev *TIMER3 = &timer3;
 
 static timer_dev timer4 = {
@@ -74,6 +77,7 @@ static timer_dev timer4 = {
     .type         = TIMER_GENERAL,
     .handlers     = { [NR_GEN_HANDLERS - 1] = 0 },
 };
+/** Timer 4 device (general-purpose) */
 timer_dev *TIMER4 = &timer4;
 
 #ifdef STM32_HIGH_DENSITY
@@ -83,6 +87,7 @@ static timer_dev timer5 = {
     .type         = TIMER_GENERAL,
     .handlers     = { [NR_GEN_HANDLERS - 1] = 0 },
 };
+/** Timer 5 device (general-purpose) */
 timer_dev *TIMER5 = &timer5;
 
 static timer_dev timer6 = {
@@ -91,6 +96,7 @@ static timer_dev timer6 = {
     .type         = TIMER_BASIC,
     .handlers     = { [NR_BAS_HANDLERS - 1] = 0 },
 };
+/** Timer 6 device (basic) */
 timer_dev *TIMER6 = &timer6;
 
 static timer_dev timer7 = {
@@ -99,6 +105,7 @@ static timer_dev timer7 = {
     .type         = TIMER_BASIC,
     .handlers     = { [NR_BAS_HANDLERS - 1] = 0 },
 };
+/** Timer 7 device (basic) */
 timer_dev *TIMER7 = &timer7;
 
 static timer_dev timer8 = {
@@ -107,6 +114,7 @@ static timer_dev timer8 = {
     .type         = TIMER_ADVANCED,
     .handlers     = { [NR_ADV_HANDLERS - 1] = 0 },
 };
+/** Timer 8 device (advanced) */
 timer_dev *TIMER8 = &timer8;
 #endif
 
@@ -213,7 +221,7 @@ void timer_attach_interrupt(timer_dev *dev,
                             uint8 interrupt,
                             voidFuncPtr handler) {
     dev->handlers[interrupt] = handler;
-    timer_enable_interrupt(dev, interrupt);
+    timer_enable_irq(dev, interrupt);
     enable_irq(dev, interrupt);
 }
 
@@ -227,7 +235,7 @@ void timer_attach_interrupt(timer_dev *dev,
  * @see timer_channel
  */
 void timer_detach_interrupt(timer_dev *dev, uint8 interrupt) {
-    timer_disable_interrupt(dev, interrupt);
+    timer_disable_irq(dev, interrupt);
     dev->handlers[interrupt] = NULL;
 }
 
@@ -301,63 +309,92 @@ void __irq_tim8_cc(void) {
 }
 #endif
 
-static inline void dispatch_irq(timer_dev *dev, uint8 iid, uint8 sr_bit);
-static inline void dispatch_cc_irqs(timer_dev *dev);
+/* Note: the following dispatch routines make use of the fact that
+ * DIER interrupt enable bits and SR interrupt flags have common bit
+ * positions.  Thus, ANDing DIER and SR lets us check if an interrupt
+ * is enabled and if it has occurred simultaneously.
+ */
+
+/* A special-case dispatch routine for single-interrupt NVIC lines.
+ * This function assumes that the interrupt corresponding to `iid' has
+ * in fact occurred (i.e., it doesn't check DIER & SR). */
+static inline void dispatch_single_irq(timer_dev *dev,
+                                       timer_interrupt_id iid,
+                                       uint32 irq_mask) {
+    timer_bas_reg_map *regs = (dev->regs).bas;
+    void (*handler)(void) = dev->handlers[iid];
+    if (handler) {
+        handler();
+        regs->SR &= ~irq_mask;
+    }
+}
+
+/* For dispatch routines which service multiple interrupts. */
+#define handle_irq(dier_sr, irq_mask, handlers, iid, handled_irq) do {  \
+        if ((dier_sr) & (irq_mask)) {                                   \
+            void (*__handler)(void) = (handlers)[iid];                  \
+            if (__handler) {                                            \
+                __handler();                                            \
+                handled_irq |= (irq_mask);                              \
+            }                                                           \
+        }                                                               \
+    } while (0)
 
 static inline void dispatch_adv_brk(timer_dev *dev) {
-    dispatch_irq(dev, TIMER_BREAK_INTERRUPT, TIMER_SR_BIF_BIT);
+    dispatch_single_irq(dev, TIMER_BREAK_INTERRUPT, TIMER_SR_BIF);
 }
 
 static inline void dispatch_adv_up(timer_dev *dev) {
-    dispatch_irq(dev, TIMER_UPDATE_INTERRUPT, TIMER_SR_UIF_BIT);
+    dispatch_single_irq(dev, TIMER_UPDATE_INTERRUPT, TIMER_SR_UIF);
 }
 
 static inline void dispatch_adv_trg_com(timer_dev *dev) {
-    dispatch_irq(dev, TIMER_TRG_INTERRUPT, TIMER_SR_TIF_BIT);
-    dispatch_irq(dev, TIMER_COM_INTERRUPT, TIMER_SR_COMIF_BIT);
+    timer_adv_reg_map *regs = (dev->regs).adv;
+    uint32 dsr = regs->DIER & regs->SR;
+    void (**hs)(void) = dev->handlers;
+    uint32 handled = 0; /* Logical OR of SR interrupt flags we end up
+                         * handling.  We clear these.  User handlers
+                         * must clear overcapture flags, to avoid
+                         * wasting time in output mode. */
+
+    handle_irq(dsr, TIMER_SR_TIF,   hs, TIMER_TRG_INTERRUPT, handled);
+    handle_irq(dsr, TIMER_SR_COMIF, hs, TIMER_COM_INTERRUPT, handled);
+
+    regs->SR &= ~handled;
 }
 
 static inline void dispatch_adv_cc(timer_dev *dev) {
-    dispatch_cc_irqs(dev);
+    timer_adv_reg_map *regs = (dev->regs).adv;
+    uint32 dsr = regs->DIER & regs->SR;
+    void (**hs)(void) = dev->handlers;
+    uint32 handled = 0;
+
+    handle_irq(dsr, TIMER_SR_CC4IF, hs, TIMER_CC4_INTERRUPT, handled);
+    handle_irq(dsr, TIMER_SR_CC3IF, hs, TIMER_CC3_INTERRUPT, handled);
+    handle_irq(dsr, TIMER_SR_CC2IF, hs, TIMER_CC2_INTERRUPT, handled);
+    handle_irq(dsr, TIMER_SR_CC1IF, hs, TIMER_CC1_INTERRUPT, handled);
+
+    regs->SR &= ~handled;
 }
 
 static inline void dispatch_general(timer_dev *dev) {
-    dispatch_irq(dev, TIMER_TRG_INTERRUPT, TIMER_SR_TIF_BIT);
-    dispatch_cc_irqs(dev);
-    dispatch_irq(dev, TIMER_UPDATE_INTERRUPT, TIMER_SR_UIF_BIT);
+    timer_gen_reg_map *regs = (dev->regs).gen;
+    uint32 dsr = regs->DIER & regs->SR;
+    void (**hs)(void) = dev->handlers;
+    uint32 handled = 0;
+
+    handle_irq(dsr, TIMER_SR_TIF,   hs, TIMER_TRG_INTERRUPT,    handled);
+    handle_irq(dsr, TIMER_SR_CC4IF, hs, TIMER_CC4_INTERRUPT,    handled);
+    handle_irq(dsr, TIMER_SR_CC3IF, hs, TIMER_CC3_INTERRUPT,    handled);
+    handle_irq(dsr, TIMER_SR_CC2IF, hs, TIMER_CC2_INTERRUPT,    handled);
+    handle_irq(dsr, TIMER_SR_CC1IF, hs, TIMER_CC1_INTERRUPT,    handled);
+    handle_irq(dsr, TIMER_SR_UIF,   hs, TIMER_UPDATE_INTERRUPT, handled);
+
+    regs->SR &= ~handled;
 }
 
 static inline void dispatch_basic(timer_dev *dev) {
-    dispatch_irq(dev, TIMER_UPDATE_INTERRUPT, TIMER_SR_UIF_BIT);
-}
-
-static inline void dispatch_irq(timer_dev *dev, uint8 iid, uint8 sr_bit) {
-    __io uint32 *sr = &(dev->regs).bas->SR;
-    if (bb_peri_get_bit(sr, sr_bit)) {
-        if (dev->handlers[iid])
-            (dev->handlers[iid])();
-        bb_peri_set_bit(sr, sr_bit, 0);
-    }
-}
-
-static inline void dispatch_cc_irqs(timer_dev *dev) {
-    uint32 sr = (dev->regs).gen->SR;
-    uint32 sr_clear = 0;
-    uint32 b;
-
-    ASSERT_FAULT(sr & (TIMER_SR_CC1IF | TIMER_SR_CC2IF |
-                       TIMER_SR_CC3IF | TIMER_SR_CC4IF));
-
-    for (b = TIMER_SR_CC1IF_BIT; b <= TIMER_SR_CC4IF_BIT; b++) {
-        uint32 mask = BIT(b);
-        if (sr & mask) {
-            if (dev->handlers[b])
-                (dev->handlers[b])();
-            sr_clear |= mask;
-        }
-    }
-
-    (dev->regs).gen->SR &= ~sr_clear;
+    dispatch_single_irq(dev, TIMER_UPDATE_INTERRUPT, TIMER_SR_UIF);
 }
 
 /*
@@ -370,7 +407,7 @@ static void disable_channel(timer_dev *dev, uint8 channel) {
 }
 
 static void pwm_mode(timer_dev *dev, uint8 channel) {
-    timer_disable_interrupt(dev, channel);
+    timer_disable_irq(dev, channel);
     timer_oc_set_mode(dev, channel, TIMER_OC_MODE_PWM_1, TIMER_OC_PE);
     timer_cc_enable(dev, channel);
 }

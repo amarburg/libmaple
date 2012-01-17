@@ -3,23 +3,25 @@
  *
  * Copyright (c) 2010 Perry Hung.
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use, copy,
+ * modify, merge, publish, distribute, sublicense, and/or sell copies
+ * of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
  *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
  *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+ * BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+ * ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+ * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
  *****************************************************************************/
 
 /**
@@ -51,7 +53,7 @@ typedef struct rcc_reg_map {
 } rcc_reg_map;
 
 /** RCC register map base pointer */
-#define RCC_BASE                        ((rcc_reg_map*)0x40021000)
+#define RCC_BASE                        ((struct rcc_reg_map*)0x40021000)
 
 /*
  * Register bit definitions
@@ -423,11 +425,12 @@ typedef enum rcc_pll_multiplier {
 } rcc_pll_multiplier;
 
 /**
- * @brief Identifies bus and clock line for a device
+ * @brief Identifies bus and clock line for a peripheral.
  *
- * Also generally useful as a unique identifier for that device.
+ * Also generally useful as a unique identifier for that peripheral
+ * (or its corresponding device struct).
  */
-typedef enum {
+typedef enum rcc_clk_id {
     RCC_GPIOA,
     RCC_GPIOB,
     RCC_GPIOC,
@@ -453,6 +456,7 @@ typedef enum {
     RCC_CRC,
     RCC_FLITF,
     RCC_SRAM,
+    RCC_USB,
 #if defined(STM32_HIGH_DENSITY) || defined(STM32_XL_DENSITY)
     RCC_GPIOE,
     RCC_GPIOF,
@@ -509,42 +513,42 @@ typedef enum rcc_prescaler {
  * ADC prescaler dividers
  * @see rcc_set_prescaler()
  */
-typedef enum adc_prescaler_divider {
+typedef enum rcc_adc_divider {
     RCC_ADCPRE_PCLK_DIV_2 = 0x0 << 14,
     RCC_ADCPRE_PCLK_DIV_4 = 0x1 << 14,
     RCC_ADCPRE_PCLK_DIV_6 = 0x2 << 14,
     RCC_ADCPRE_PCLK_DIV_8 = 0x3 << 14,
-} adc_prescaler_divider;
+} rcc_adc_divider;
 
 /**
  * APB1 prescaler dividers
  * @see rcc_set_prescaler()
  */
-typedef enum apb1_prescaler_divider {
+typedef enum rcc_apb1_divider {
     RCC_APB1_HCLK_DIV_1 = 0x0 << 8,
     RCC_APB1_HCLK_DIV_2 = 0x4 << 8,
     RCC_APB1_HCLK_DIV_4 = 0x5 << 8,
     RCC_APB1_HCLK_DIV_8 = 0x6 << 8,
     RCC_APB1_HCLK_DIV_16 = 0x7 << 8,
-} apb1_prescaler_divider;
+} rcc_apb1_divider;
 
 /**
  * APB2 prescaler dividers
  * @see rcc_set_prescaler()
  */
-typedef enum apb2_prescaler_divider {
+typedef enum rcc_apb2_divider {
     RCC_APB2_HCLK_DIV_1 = 0x0 << 11,
     RCC_APB2_HCLK_DIV_2 = 0x4 << 11,
     RCC_APB2_HCLK_DIV_4 = 0x5 << 11,
     RCC_APB2_HCLK_DIV_8 = 0x6 << 11,
     RCC_APB2_HCLK_DIV_16 = 0x7 << 11,
-} apb2_prescaler_divider;
+} rcc_apb2_divider;
 
 /**
  * AHB prescaler dividers
  * @see rcc_set_prescaler()
  */
-typedef enum ahb_prescaler_divider {
+typedef enum rcc_ahb_divider {
     RCC_AHB_SYSCLK_DIV_1 = 0x0 << 4,
     RCC_AHB_SYSCLK_DIV_2 = 0x8 << 4,
     RCC_AHB_SYSCLK_DIV_4 = 0x9 << 4,
@@ -555,7 +559,7 @@ typedef enum ahb_prescaler_divider {
     RCC_AHB_SYSCLK_DIV_128 = 0xD << 4,
     RCC_AHB_SYSCLK_DIV_256 = 0xE << 4,
     RCC_AHB_SYSCLK_DIV_512 = 0xF << 4,
-} ahb_prescaler_divider;
+} rcc_ahb_divider;
 
 void rcc_set_prescaler(rcc_prescaler prescaler, uint32 divider);
 

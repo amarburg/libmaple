@@ -32,11 +32,6 @@
  * See maple.h for more information on these definitions.
  */
 
-#include "gpio.h"
-#include "timer.h"
-
-#include "wirish_types.h"
-
 #ifndef _BOARD_MAPLE_MINI_H_
 #define _BOARD_MAPLE_MINI_H_
 
@@ -66,7 +61,7 @@
 
 #define BOARD_NR_GPIO_PINS        34
 #define BOARD_NR_PWM_PINS         12
-#define BOARD_NR_ADC_PINS         10
+#define BOARD_NR_ADC_PINS          9
 #define BOARD_NR_USED_PINS         4
 
 #define BOARD_JTMS_SWDIO_PIN      22
@@ -74,5 +69,8 @@
 #define BOARD_JTDI_PIN            20
 #define BOARD_JTDO_PIN            19
 #define BOARD_NJTRST_PIN          18
+
+#define BOARD_USB_DISC_DEV        GPIOB
+#define BOARD_USB_DISC_BIT        9
 
 #endif

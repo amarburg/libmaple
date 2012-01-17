@@ -3,23 +3,25 @@
  *
  * Copyright (c) 2010 Perry Hung.
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use, copy,
+ * modify, merge, publish, distribute, sublicense, and/or sell copies
+ * of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
  *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
  *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+ * BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+ * ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+ * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
  *****************************************************************************/
 
 /**
@@ -69,12 +71,9 @@ typedef struct adc_dev {
     rcc_clk_id clk_id; /**< RCC clock information */
 } adc_dev;
 
-/** ADC1 device. */
 extern const adc_dev *ADC1;
-/** ADC2 device. */
 extern const adc_dev *ADC2;
 #ifdef STM32_HIGH_DENSITY
-/** ADC3 device. */
 extern const adc_dev *ADC3;
 #endif
 
@@ -83,11 +82,13 @@ extern const adc_dev *ADC3;
  */
 
 /** ADC1 register map base pointer. */
-#define ADC1_BASE                       ((adc_reg_map*)0x40012400)
+#define ADC1_BASE                       ((struct adc_reg_map*)0x40012400)
 /** ADC2 register map base pointer. */
-#define ADC2_BASE                       ((adc_reg_map*)0x40012800)
+#define ADC2_BASE                       ((struct adc_reg_map*)0x40012800)
+#ifdef STM32_HIGH_DENSITY
 /** ADC3 register map base pointer. */
-#define ADC3_BASE                       ((adc_reg_map*)0x40013C00)
+#define ADC3_BASE                       ((struct adc_reg_map*)0x40013C00)
+#endif
 
 /*
  * Register bit definitions
@@ -287,7 +288,11 @@ typedef enum adc_extsel_event {
 void adc_set_extsel(const adc_dev *dev, adc_extsel_event event);
 void adc_foreach(void (*fn)(const adc_dev*));
 
-/** ADC per-sample conversion times, in ADC clock cycles */
+/**
+ * @brief ADC sample times, in ADC clock cycles
+ *
+ * These control the amount of time spent sampling the input voltage.
+ */
 typedef enum {
     ADC_SMPR_1_5,               /**< 1.5 ADC cycles */
     ADC_SMPR_7_5,               /**< 7.5 ADC cycles */
