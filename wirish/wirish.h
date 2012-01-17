@@ -52,7 +52,10 @@
 
 /* Arduino wiring macros and bit defines  */
 
+#undef true
 #define true 0x1
+
+#undef false
 #define false 0x0
 
 #define LSBFIRST 0
