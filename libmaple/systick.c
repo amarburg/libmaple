@@ -85,5 +85,4 @@ void __exc_systick(void) {
         systick_user_callback();
     }
 }
-#endif
 
