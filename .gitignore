@@ -1,5 +1,6 @@
 build/
-doxygen/
+doxygen/xml/
+doxygen/html/
 main.cpp
 libmaple.layout
 tags
@@ -8,3 +9,4 @@ TAGS
 *.swp
 arm
 cscope*
+.gdbinit
